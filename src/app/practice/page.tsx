@@ -6,7 +6,16 @@ import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 import { playRhythmPreview } from "@/lib/audioEngine";
 import MiniNotation from "@/components/MiniNotation";
 
-// --- NEW COMPONENT: Renders a single VexFlow note natively without DOM hacks ---
+const NOTE_SELECT_OPTIONS = [
+    { id: "q", duration: "G4/q" },
+    { id: "q.", duration: "G4/q." },
+    { id: "8", duration: "G4/8" },
+    { id: "8.", duration: "G4/8." },
+    { id: "16", duration: "G4/16" },
+    { id: "qr", duration: "B4/q/r" },
+    { id: "8r", duration: "B4/8/r" },
+];
+
 function NoteButtonIcon({ duration }: { duration: string }) {
     const containerRef = useRef<HTMLDivElement>(null!);
     const rawId = useId();
@@ -30,17 +39,11 @@ function NoteButtonIcon({ duration }: { duration: string }) {
         });
 
         try {
-            const noteStr = duration.includes('r') ? `B4/${duration}` : `G4/${duration}`;
-            const vexNotes = score.notes(noteStr);
+            const vexNotes = score.notes(duration);
             const voice = score.voice(vexNotes, { time: "4/4" }).setStrict(false);
-
-            // Add the stave normally without the unsupported 'options' object
             const stave = system.addStave({ voices: [voice] });
-
-            // 2. Force the horizontal lines to 0 (bypassing the strict TypeScript check)
             (stave as any).options.num_lines = 0;
 
-            // 3. Remove the start and end barlines natively using VexFlow's official enum
             stave.setBegBarType(BarlineType.NONE);
             stave.setEndBarType(BarlineType.NONE);
 
@@ -54,11 +57,11 @@ function NoteButtonIcon({ duration }: { duration: string }) {
         <div
             id={uniqueId}
             ref={containerRef}
-            className="pointer-events-none flex items-center justify-center transform scale-[0.9]"
+            className="pointer-events-none flex items-center justify-center transform scale-[0.7]"
         />
     );
 }
-// -----------------------------------------------------------------------------------
+
 
 function PracticeArea() {
     const router = useRouter();
@@ -79,7 +82,6 @@ function PracticeArea() {
     const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
     const [userAnswer, setUserAnswer] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<"idle" | "correct" | "incorrect">("idle");
-    // New state to manage the selected note type and its blue outline
     const [selectedDuration, setSelectedDuration] = useState<string>("q");
 
     const currentTask = activeTasks[currentTaskIndex];
@@ -110,7 +112,7 @@ function PracticeArea() {
 
     const handleAddNote = (duration: string) => {
         setUserAnswer(prev => {
-            const newAnswer = [...prev, duration.includes('r') ? `B4/${duration}` : `G4/${duration}`];
+            const newAnswer = [...prev, duration];
 
             if (suffix && !prev.includes('|')) {
                 const totalBeats = newAnswer.reduce((sum, n) => sum + getNoteBeats(n), 0);
@@ -166,12 +168,12 @@ function PracticeArea() {
     return (
         <div className="min-h-screen bg-[#FFF6EB] flex flex-col items-center p-4 md:p-8 font-sans relative overflow-hidden">
 
-            {/* Decoratieve achtergrond elementen */}
+            {/* Background elements */}
             <div className="absolute top-20 left-10 text-orange-300 opacity-50 rotate-12 text-6xl pointer-events-none">♪</div>
             <div className="absolute top-40 right-20 text-green-300 opacity-50 -rotate-12 text-6xl pointer-events-none">♫</div>
 
-            {/* Header / Navigatie */}
-            <header className="flex justify-between items-center w-full max-w-4xl mb-6 bg-white/60 backdrop-blur-md p-3 px-6 rounded-2xl shadow-sm border border-white/40">
+            {/* Header / Navigation */}
+            <header className="flex justify-between items-center w-full max-w-4xl mb-6 bg-white/60 backdrop-blur-md p-2 px-4 rounded-2xl shadow-sm border border-white/40">
                 <button
                     onClick={() => router.push("/")}
                     className="flex items-center gap-2 text-slate-700 hover:text-slate-900 font-medium transition-colors"
@@ -182,7 +184,7 @@ function PracticeArea() {
                     Terug
                 </button>
 
-                {/* Voortgangsindicator */}
+                {/* Progressindicator */}
                 <div className="flex flex-col items-center">
                     <div className="flex gap-2 mb-1.5">
                         {activeTasks.map((_, i) => (
@@ -210,10 +212,8 @@ function PracticeArea() {
                 </div>
             </header>
 
-            {/* Hoofdkaart */}
-            <main className="w-full max-w-4xl bg-white rounded-[2rem] shadow-sm p-6 md:p-10 border border-slate-100 z-10">
-
-                {/* Stap 1: Luister */}
+            <main className="w-full max-w-4xl bg-white rounded-[2rem] shadow-sm p-3 md:p-10 border border-slate-100 z-10">
+                {/* Step 1 */}
                 <section className="mb-8">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="bg-[#EEF2FF] p-3 rounded-full text-[#4F46E5]">
@@ -240,7 +240,7 @@ function PracticeArea() {
 
                 <hr className="border-dashed border-slate-200 my-8" />
 
-                {/* Stap 2: Jouw Antwoord */}
+                {/* Step 2 */}
                 <section className="mb-8 flex flex-col">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="bg-[#FFF4E5] p-3 rounded-full text-[#F59E0B]">
@@ -254,19 +254,9 @@ function PracticeArea() {
                     </div>
                     <p className="text-slate-500 mb-6 ml-16">Gebruik de noten hieronder om jouw ritme in te voeren.</p>
 
-                    {/* UPDATED: Note Selector Toolbar designed to match your image exactly */}
                     <div className="flex flex-wrap items-center gap-3 ml-0 md:ml-16">
-                        {/* New gray toolbar panel holding the note buttons */}
-                        <div className="flex gap-1.5 p-1.5 bg-[#F1F3F5] rounded-3xl border border-[#DDE2E5]">
-                            {[
-                                { id: "q", duration: "q" },
-                                { id: "q.", duration: "q." },
-                                { id: "8", duration: "8" },
-                                { id: "8.", duration: "8." },
-                                { id: "16", duration: "16" },
-                                { id: "qr", duration: "q/r" },
-                                { id: "8r", duration: "8/r" },
-                            ].map((noteType) => {
+                        <div className="flex flex-wrap gap-1.5 p-1.5 bg-[#F1F3F5] rounded-3xl border border-[#DDE2E5]">
+                            {NOTE_SELECT_OPTIONS.map((noteType) => {
                                 const isSelected = noteType.id === selectedDuration;
                                 return (
                                     <div key={noteType.id} className="relative">
@@ -275,12 +265,10 @@ function PracticeArea() {
                                                 handleAddNote(noteType.duration);
                                                 setSelectedDuration(noteType.id);
                                             }}
-                                            // Standard button styling: square, rounded-2xl, soft shadow, subtle gray border
-                                            className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_4px_12px_-6px_rgba(0,0,0,0.1)] transition-all overflow-hidden border-2 border-[#DDE2E5] hover:border-[#CED4DA]"
+                                            className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-[0_4px_12px_-6px_rgba(0,0,0,0.1)] transition-all overflow-hidden border-2 border-[#DDE2E5] hover:border-[#CED4DA]"
                                         >
                                             <NoteButtonIcon duration={noteType.duration} />
                                         </button>
-                                        {/* Blue selection outline applied outside the button for the active note */}
                                         {isSelected && (
                                             <div className="absolute -inset-1 border-4 border-[#5C7CFA] rounded-3xl pointer-events-none"></div>
                                         )}
@@ -291,7 +279,7 @@ function PracticeArea() {
 
                         <div className="hidden md:block w-px h-10 bg-slate-200 mx-2"></div>
 
-                        {/* Undo/Clear buttons are preserved */}
+                        {/* Undo/Clear buttons */}
                         <div className="flex gap-3 mt-2 md:mt-0">
                             <button onClick={handleUndo} disabled={userAnswer.length === 0} className="flex items-center gap-2 px-5 py-3.5 bg-[#FFF9EB] text-[#D4A017] border border-[#FBEECB] rounded-xl font-semibold hover:bg-[#FFF4D6] disabled:opacity-50 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
@@ -326,7 +314,6 @@ function PracticeArea() {
 
                     {feedback === "correct" && (
                         <div className="ml-0 md:ml-16 flex flex-col items-center animate-in fade-in zoom-in duration-300">
-                            {/* Correct Box Design */}
                             <div className="bg-[#F2FCF5] border border-[#D1F4E0] w-full rounded-2xl p-6 relative overflow-hidden mb-6 shadow-sm">
                                 <div className="flex items-center gap-4">
                                     <div className="bg-[#48C774] text-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-sm">
@@ -352,7 +339,6 @@ function PracticeArea() {
 
                     {feedback === "incorrect" && (
                         <div className="ml-0 md:ml-16 flex flex-col items-center animate-in fade-in duration-300">
-                            {/* Incorrect Box Design */}
                             <div className="bg-[#FFF5F5] border border-[#FED7D7] w-full rounded-2xl p-6 relative overflow-hidden mb-6 shadow-sm">
                                 <div className="flex items-center gap-4 mb-4 z-10 relative">
                                     <div className="bg-[#FC8181] text-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-sm">
@@ -393,8 +379,7 @@ function PracticeArea() {
 
 const PracticeLoading = () => (
     <div className="flex items-center justify-center min-h-screen bg-[#FFF6EB] text-slate-500 font-medium">
-        Aan het
-        laden...
+        Aan het laden...
     </div>
 );
 
