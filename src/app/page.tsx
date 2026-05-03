@@ -116,7 +116,7 @@ export default function Home() {
             <header className="flex justify-between items-end mb-6 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">Ritmes</h2>
-                <p className="text-slate-500 mt-1">Selecteer de patronen die je zou willen oefenen</p>
+                <p className="text-slate-500 mt-1">Selecteer de figuren die je zou willen oefenen</p>
               </div>
 
               {/* Select All Button */}
