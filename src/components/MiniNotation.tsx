@@ -56,7 +56,7 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
 
                 const system = vf.System({
                     x: xOffset,
-                    y: 20,
+                    y: -10,
                     width: measureWidth,
                 });
 
@@ -90,7 +90,7 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
         <div
             id={uniqueId}
             ref={containerRef}
-            className="pointer-events-none h-[120px] transition-all duration-300"
+            className="pointer-events-none h-[70px] transition-all duration-300"
             style={{ width: `${dynamicWidth}px` }}
         />
     );
