@@ -7,11 +7,18 @@ export const RHYTHM_PRESETS = [
         easyScore: "G4/8, G4/8, G4/8, G4/16, G4/16"
     },
     {
-        id: "syncope_2_4",
+        id: "syncope",
         category: "Syncope",
         name: "Syncope",
         timeSignature: "2/4",
         easyScore: "G4/8, G4/q, G4/8"
+    },
+    {
+        id: "syncope_2",
+        category: "Syncope",
+        name: "Syncope",
+        timeSignature: "2/4",
+        easyScore: "G4/8, G4/8, B4/8/r, G4/8"
     },
     {
         id: "hop-figuur",
@@ -19,6 +26,13 @@ export const RHYTHM_PRESETS = [
         name: "Hopfiguur",
         timeSignature: "2/4",
         easyScore: "G4/8., G4/16, G4/8, G4/8"
+    },
+    {
+        id: "hop-figuur-2",
+        category: "Hopfiguur",
+        name: "Hopfiguur",
+        timeSignature: "2/4",
+        easyScore: "G4/8, G4/8, G4/8., G4/16"
     },
     {
         id: "sixteenths_eighths_2_4",

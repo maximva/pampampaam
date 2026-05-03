@@ -110,7 +110,7 @@ function PracticeArea() {
 
     const handleAddNote = (duration: string) => {
         setUserAnswer(prev => {
-            const newAnswer = [...prev, `B4/${duration}`];
+            const newAnswer = [...prev, duration.includes('r') ? `B4/${duration}` : `G4/${duration}`];
 
             if (suffix && !prev.includes('|')) {
                 const totalBeats = newAnswer.reduce((sum, n) => sum + getNoteBeats(n), 0);

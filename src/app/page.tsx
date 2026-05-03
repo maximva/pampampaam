@@ -6,7 +6,7 @@ import { playRhythmPreview } from "@/lib/audioEngine";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 
 const SUFFIX_PRESETS = [
-  { id: "kwart-kwartrust", name: "Bald 1e jaar", notes: "B4/q, B4/q/r" },
+  { id: "kwart-kwartrust", name: "Bald 1e jaar", notes: "G4/q, B4/q/r" },
 ];
 
 export default function Home() {
