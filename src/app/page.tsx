@@ -5,13 +5,17 @@ import MiniNotation from "@/components/MiniNotation";
 import { playRhythmPreview } from "@/lib/audioEngine";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 
+const SUFFIX_PRESETS = [
+  { id: "kwart-kwartrust", name: "Bald 1e jaar", notes: "B4/q, B4/q/r" },
+];
+
 export default function Home() {
   const router = useRouter();
   const [tempo, setTempo] = useState(65);
   const [timeSignature, setTimeSignature] = useState("2/4");
   const [selectedRhythms, setSelectedRhythms] = useState<string[]>([]);
   const [numExercises, setNumExercises] = useState(5);
-  const [suffix, setSuffix] = useState(""); // State for suffix notes
+  const [suffix, setSuffix] = useState("");
 
   const availableRhythms = useMemo(() => {
     return RHYTHM_PRESETS.filter(r => r.timeSignature === timeSignature);
@@ -20,6 +24,7 @@ export default function Home() {
   const handleTimeSignatureChange = (newTs: string) => {
     setTimeSignature(newTs);
     setSelectedRhythms([]);
+    setSuffix(""); // Optional: clear suffix when TS changes if presets are TS-dependent
   };
 
   const toggleRhythm = (id: string) => {
@@ -48,7 +53,6 @@ export default function Home() {
     }
 
     const rhythmQuery = sequence.join(",");
-    // URL encode the suffix to safely pass it
     const suffixQuery = suffix.trim() ? `&suffix=${encodeURIComponent(suffix.trim())}` : "";
 
     router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}${suffixQuery}`);
@@ -101,20 +105,41 @@ export default function Home() {
                   </div>
                 </label>
 
-                {/* Suffix Input */}
-                <label className="flex flex-col pt-2 border-t border-slate-100">
-                  <span className="font-semibold text-sm mb-2 text-slate-700">Vaste eindmaat (optioneel)</span>
+                {/* Suffix Input & Presets */}
+                <div className="flex flex-col pt-2 border-t border-slate-100">
+                  <span className="font-semibold text-sm mb-2 text-slate-700">Vaste eindmaat</span>
+
+                  {/* Preset Options Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUFFIX_PRESETS.map((preset) => (
+                        <button
+                            key={preset.id}
+                            onClick={() => setSuffix(preset.notes)}
+                            className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
+                                suffix === preset.notes
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-slate-200 bg-white hover:border-slate-300'
+                            }`}
+                        >
+                          <div className="pointer-events-none scale-75 -my-2">
+                            <MiniNotation timeSignature={timeSignature} notes={preset.notes}/>
+                          </div>
+                          <span className="text-[10px] uppercase font-bold text-slate-500 mt-1">{preset.name}</span>
+                        </button>
+                    ))}
+                  </div>
+
+                  <span className="text-xs text-slate-500 mt-3">
+                    Klik op een optie of typ zelf VexFlow codes.
+                  </span>
                   <input
                       type="text"
                       value={suffix}
                       onChange={(e) => setSuffix(e.target.value)}
                       placeholder="Bijv. B4/q, B4/q"
-                      className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                      className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm mb-3"
                   />
-                  <span className="text-xs text-slate-500 mt-1.5">
-                    Typ VexFlow noten om aan elke oefening vast te plakken.
-                  </span>
-                </label>
+                </div>
 
               </div>
 

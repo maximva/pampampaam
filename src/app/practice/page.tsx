@@ -333,18 +333,9 @@ function PracticeArea() {
                                         </svg>
                                     </div>
                                     <div className="z-10">
-                                        <h3 className="text-[#2F855A] font-bold text-lg">Goed gedaan! 🎉</h3>
+                                        <h3 className="text-[#2F855A] font-bold text-lg">Goed gedaan!</h3>
                                         <p className="text-[#38A169] text-sm mt-1">Je ritme is helemaal correct.</p>
                                     </div>
-                                </div>
-                                {/* Blij sterretje decoratie */}
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-90 pointer-events-none">
-                                    <svg width="60" height="60" viewBox="0 0 24 24" fill="#68D391" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#A5E0B6" stroke="#68D391" strokeWidth="1.5" strokeLinejoin="round"/>
-                                        <circle cx="9.5" cy="12.5" r="1.5" fill="#2F855A"/>
-                                        <circle cx="14.5" cy="12.5" r="1.5" fill="#2F855A"/>
-                                        <path d="M10.5 15.5C10.5 15.5 11.5 16.5 12 16.5C12.5 16.5 13.5 15.5 13.5 15.5" stroke="#2F855A" strokeWidth="1.5" strokeLinecap="round"/>
-                                    </svg>
                                 </div>
                             </div>
 
@@ -371,16 +362,6 @@ function PracticeArea() {
                                         <h3 className="text-[#C53030] font-bold text-lg">Oeps, niet helemaal goed</h3>
                                         <p className="text-[#E53E3E] text-sm mt-1">Vergelijk jouw ritme met het juiste ritme hieronder.</p>
                                     </div>
-                                </div>
-
-                                {/* Verdrietig sterretje decoratie */}
-                                <div className="absolute right-4 top-4 opacity-90 pointer-events-none">
-                                    <svg width="60" height="60" viewBox="0 0 24 24" fill="#FC8181" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FEB2B2" stroke="#FC8181" strokeWidth="1.5" strokeLinejoin="round"/>
-                                        <circle cx="9.5" cy="12.5" r="1.5" fill="#C53030"/>
-                                        <circle cx="14.5" cy="12.5" r="1.5" fill="#C53030"/>
-                                        <path d="M10.5 16.5C10.5 16.5 11.5 15.5 12 15.5C12.5 15.5 13.5 16.5 13.5 16.5" stroke="#C53030" strokeWidth="1.5" strokeLinecap="round"/>
-                                    </svg>
                                 </div>
 
                                 <div className="border-t border-[#FED7D7] pt-4 mt-2">
