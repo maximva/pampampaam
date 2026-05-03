@@ -27,7 +27,6 @@ function NoteButtonIcon({ duration }: { duration: string }) {
             x: 12,
             y: -18,
             width: 56,
-            noConnector: true
         });
 
         try {
