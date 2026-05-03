@@ -8,7 +8,7 @@ interface MiniNotationProps {
 }
 
 export default function MiniNotation({ timeSignature, notes }: MiniNotationProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null!);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -16,7 +16,7 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
 
         const vf = new Factory({
             renderer: {
-                elementId: containerRef.current,
+                elementId: "vexflow-container",
                 width: 220,
                 height: 120
             }

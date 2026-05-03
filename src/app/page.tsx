@@ -61,7 +61,7 @@ export default function Home() {
           {/* LEFT SIDEBAR: Settings & Controls */}
           <aside className="w-full md:w-80 shrink-0 flex flex-col gap-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <h1 className="text-3xl font-bold mb-8 text-slate-800">Pampampaam</h1>
+              <h1 className="text-3xl font-bold mb-8 text-slate-800">Ritmetrainer</h1>
 
               <div className="flex flex-col gap-6 mb-8">
 
