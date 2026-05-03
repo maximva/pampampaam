@@ -3,14 +3,15 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import MiniNotation from "@/components/MiniNotation";
 import { playRhythmPreview } from "@/lib/audioEngine";
-import { RHYTHM_PRESETS } from "@/lib/rhythmData"; // Import from your new data file
+import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 
 export default function Home() {
   const router = useRouter();
   const [tempo, setTempo] = useState(65);
   const [timeSignature, setTimeSignature] = useState("2/4");
   const [selectedRhythms, setSelectedRhythms] = useState<string[]>([]);
-  const [numExercises, setNumExercises] = useState(5); // New state for exercise count
+  const [numExercises, setNumExercises] = useState(5);
+  const [suffix, setSuffix] = useState(""); // State for suffix notes
 
   const availableRhythms = useMemo(() => {
     return RHYTHM_PRESETS.filter(r => r.timeSignature === timeSignature);
@@ -29,19 +30,17 @@ export default function Home() {
     );
   };
 
-  // Toggle "Select All" functionality
   const toggleSelectAll = () => {
     if (selectedRhythms.length === availableRhythms.length) {
-      setSelectedRhythms([]); // Deselect all
+      setSelectedRhythms([]);
     } else {
-      setSelectedRhythms(availableRhythms.map(r => r.id)); // Select all
+      setSelectedRhythms(availableRhythms.map(r => r.id));
     }
   };
 
   const startPractice = () => {
     if (selectedRhythms.length === 0) return;
 
-    // Generate a random sequence of rhythms based on the selected pool
     const sequence: string[] = [];
     for (let i = 0; i < numExercises; i++) {
       const randomIndex = Math.floor(Math.random() * selectedRhythms.length);
@@ -49,7 +48,10 @@ export default function Home() {
     }
 
     const rhythmQuery = sequence.join(",");
-    router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}`);
+    // URL encode the suffix to safely pass it
+    const suffixQuery = suffix.trim() ? `&suffix=${encodeURIComponent(suffix.trim())}` : "";
+
+    router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}${suffixQuery}`);
   };
 
   const isAllSelected = availableRhythms.length > 0 && selectedRhythms.length === availableRhythms.length;
@@ -99,6 +101,21 @@ export default function Home() {
                   </div>
                 </label>
 
+                {/* Suffix Input */}
+                <label className="flex flex-col pt-2 border-t border-slate-100">
+                  <span className="font-semibold text-sm mb-2 text-slate-700">Vaste eindmaat (optioneel)</span>
+                  <input
+                      type="text"
+                      value={suffix}
+                      onChange={(e) => setSuffix(e.target.value)}
+                      placeholder="Bijv. B4/q, B4/q"
+                      className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-sm"
+                  />
+                  <span className="text-xs text-slate-500 mt-1.5">
+                    Typ VexFlow noten om aan elke oefening vast te plakken.
+                  </span>
+                </label>
+
               </div>
 
               <button
@@ -119,7 +136,6 @@ export default function Home() {
                 <p className="text-slate-500 mt-1">Selecteer de figuren die je zou willen oefenen</p>
               </div>
 
-              {/* Select All Button */}
               {availableRhythms.length > 0 && (
                   <button
                       onClick={toggleSelectAll}

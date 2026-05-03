@@ -1,9 +1,65 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useMemo } from "react";
+import {Suspense, useState, useMemo, useEffect, useId, useRef, ReactNode} from "react";
+import { Factory, BarlineType } from "vexflow";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 import { playRhythmPreview } from "@/lib/audioEngine";
 import MiniNotation from "@/components/MiniNotation";
+
+// --- NEW COMPONENT: Renders a single VexFlow note natively without DOM hacks ---
+function NoteButtonIcon({ duration }: { duration: string }) {
+    const containerRef = useRef<HTMLDivElement>(null!);
+    const rawId = useId();
+    const uniqueId = `vex-btn-${rawId.replace(/:/g, "")}`;
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        containerRef.current.innerHTML = "";
+
+        const vf = new Factory({
+            renderer: { elementId: uniqueId, width: 80, height: 80 }
+        });
+
+        const score = vf.EasyScore();
+
+        // 1. noConnector: true tells the System to stop generating the right-side connector!
+        const system = vf.System({
+            x: 12,
+            y: -18,
+            width: 56,
+            noConnector: true
+        });
+
+        try {
+            const noteStr = duration.includes('r') ? `B4/${duration}` : `G4/${duration}`;
+            const vexNotes = score.notes(noteStr);
+            const voice = score.voice(vexNotes, { time: "4/4" }).setStrict(false);
+
+            // Add the stave normally without the unsupported 'options' object
+            const stave = system.addStave({ voices: [voice] });
+
+            // 2. Force the horizontal lines to 0 (bypassing the strict TypeScript check)
+            (stave as any).options.num_lines = 0;
+
+            // 3. Remove the start and end barlines natively using VexFlow's official enum
+            stave.setBegBarType(BarlineType.NONE);
+            stave.setEndBarType(BarlineType.NONE);
+
+            vf.draw();
+        } catch (error) {
+            console.error("Failed to render button icon:", error);
+        }
+    }, [duration, uniqueId]);
+
+    return (
+        <div
+            id={uniqueId}
+            ref={containerRef}
+            className="pointer-events-none flex items-center justify-center transform scale-[0.9]"
+        />
+    );
+}
+// -----------------------------------------------------------------------------------
 
 function PracticeArea() {
     const router = useRouter();
@@ -11,7 +67,9 @@ function PracticeArea() {
 
     const tempo = parseInt(searchParams.get("tempo") || "65", 10);
     const timeSignature = searchParams.get("ts") || "2/4";
-    const rhythmIds = searchParams.get("rhythms")?.split(",") || [];
+    const rhythmsParam = searchParams.get("rhythms");
+    const rhythmIds = rhythmsParam ? rhythmsParam.split(",") : [];
+    const suffix = searchParams.get("suffix") || ""; // Get suffix
 
     const activeTasks = useMemo(() => {
         return rhythmIds
@@ -22,8 +80,20 @@ function PracticeArea() {
     const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
     const [userAnswer, setUserAnswer] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<"idle" | "correct" | "incorrect">("idle");
+    // New state to manage the selected note type and its blue outline
+    const [selectedDuration, setSelectedDuration] = useState<string>("q");
 
     const currentTask = activeTasks[currentTaskIndex];
+
+    const targetScore = useMemo(() => {
+        if (!currentTask) return "";
+        return suffix ? `${currentTask.easyScore}, |, ${suffix}` : currentTask.easyScore;
+    }, [currentTask, suffix]);
+
+    const playableScore = useMemo(() => {
+        if (!currentTask) return "";
+        return suffix ? `${currentTask.easyScore}, ${suffix}` : currentTask.easyScore;
+    }, [currentTask, suffix]);
 
     if (!currentTask) {
         return <div className="p-8 text-center">Geen ritmes geselecteerd.</div>;
@@ -31,13 +101,40 @@ function PracticeArea() {
 
     const answerString = userAnswer.join(", ");
 
+    const getNoteBeats = (noteStr: string) => {
+        if (noteStr.includes('/q')) return 1;
+        if (noteStr.includes('/8.')) return 0.75;
+        if (noteStr.includes('/8')) return 0.5;
+        if (noteStr.includes('/16')) return 0.25;
+        return 0;
+    };
+
     const handleAddNote = (duration: string) => {
-        setUserAnswer(prev => [...prev, `B4/${duration}`]);
+        setUserAnswer(prev => {
+            const newAnswer = [...prev, `B4/${duration}`];
+
+            if (suffix && !prev.includes('|')) {
+                const totalBeats = newAnswer.reduce((sum, n) => sum + getNoteBeats(n), 0);
+                const beatsPerMeasure = parseInt(timeSignature.split('/')[0], 10);
+
+                if (totalBeats >= beatsPerMeasure) {
+                    return [...newAnswer, '|'];
+                }
+            }
+
+            return newAnswer;
+        });
         setFeedback("idle");
     };
 
     const handleUndo = () => {
-        setUserAnswer(prev => prev.slice(0, -1));
+        setUserAnswer(prev => {
+            if (prev.length === 0) return prev;
+            if (prev[prev.length - 1] === '|') {
+                return prev.slice(0, -2);
+            }
+            return prev.slice(0, -1);
+        });
         setFeedback("idle");
     };
 
@@ -47,7 +144,7 @@ function PracticeArea() {
     };
 
     const checkAnswer = () => {
-        const target = currentTask.easyScore.replace(/\s+/g, '');
+        const target = targetScore.replace(/\s+/g, '');
         const user = answerString.replace(/\s+/g, '');
 
         if (target === user) {
@@ -70,7 +167,7 @@ function PracticeArea() {
     return (
         <div className="min-h-screen bg-[#FFF6EB] flex flex-col items-center p-4 md:p-8 font-sans relative overflow-hidden">
 
-            {/* Decoratieve achtergrond elementen (optioneel, voor de 'vibe') */}
+            {/* Decoratieve achtergrond elementen */}
             <div className="absolute top-20 left-10 text-orange-300 opacity-50 rotate-12 text-6xl pointer-events-none">♪</div>
             <div className="absolute top-40 right-20 text-green-300 opacity-50 -rotate-12 text-6xl pointer-events-none">♫</div>
 
@@ -86,7 +183,7 @@ function PracticeArea() {
                     Terug
                 </button>
 
-                {/* Voortgangsindicator (Bolletjes) */}
+                {/* Voortgangsindicator */}
                 <div className="flex flex-col items-center">
                     <div className="flex gap-2 mb-1.5">
                         {activeTasks.map((_, i) => (
@@ -131,7 +228,7 @@ function PracticeArea() {
 
                     <div className="flex justify-center mb-4 relative">
                         <button
-                            onClick={() => playRhythmPreview(currentTask.easyScore, tempo)}
+                            onClick={() => playRhythmPreview(playableScore, tempo)}
                             className="group flex items-center gap-3 bg-gradient-to-b from-[#5C7CFA] to-[#4C6EF5] hover:from-[#4C6EF5] hover:to-[#3B5BDB] text-white px-10 py-4 rounded-full font-bold shadow-[0_8px_20px_-6px_rgba(76,110,245,0.5)] transition-all active:scale-95 text-lg"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
@@ -144,7 +241,7 @@ function PracticeArea() {
 
                 <hr className="border-dashed border-slate-200 my-8" />
 
-                {/* Stap 2: Tik */}
+                {/* Stap 2: Jouw Antwoord */}
                 <section className="mb-8 flex flex-col">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="bg-[#FFF4E5] p-3 rounded-full text-[#F59E0B]">
@@ -158,48 +255,59 @@ function PracticeArea() {
                     </div>
                     <p className="text-slate-500 mb-6 ml-16">Gebruik de noten hieronder om jouw ritme in te voeren.</p>
 
-                    {/* Noten Palet */}
+                    {/* UPDATED: Note Selector Toolbar designed to match your image exactly */}
                     <div className="flex flex-wrap items-center gap-3 ml-0 md:ml-16">
-                        <div className="flex gap-3">
-                            <button onClick={() => handleAddNote("q")}
-                                    className="w-14 h-14 bg-white border-2 border-blue-200 bg-blue-50/30 text-blue-900 rounded-xl hover:border-blue-400 flex items-center justify-center text-3xl font-bold shadow-sm transition-colors">♩
-                            </button>
-                            <button onClick={() => handleAddNote("8")}
-                                    className="w-14 h-14 bg-white border-2 border-slate-100 rounded-xl hover:border-blue-400 flex items-center justify-center text-3xl font-bold shadow-sm transition-colors text-slate-800">♪
-                            </button>
-                            <button onClick={() => handleAddNote("8.")}
-                                    className="w-14 h-14 bg-white border-2 border-slate-100 rounded-xl hover:border-blue-400 flex items-center justify-center text-3xl font-bold shadow-sm transition-colors text-slate-800">♪.
-                            </button>
-                            <button onClick={() => handleAddNote("16")}
-                                    className="w-14 h-14 bg-white border-2 border-slate-100 rounded-xl hover:border-blue-400 flex items-center justify-center text-3xl font-bold shadow-sm transition-colors text-slate-800">♬
-                            </button>
+                        {/* New gray toolbar panel holding the note buttons */}
+                        <div className="flex gap-1.5 p-1.5 bg-[#F1F3F5] rounded-3xl border border-[#DDE2E5]">
+                            {[
+                                { id: "q", duration: "q" },
+                                { id: "8", duration: "8" },
+                                { id: "8.", duration: "8." },
+                                { id: "16", duration: "16" },
+                                { id: "qr", duration: "q/r" },
+                            ].map((noteType) => {
+                                const isSelected = noteType.id === selectedDuration;
+                                return (
+                                    <div key={noteType.id} className="relative">
+                                        <button
+                                            onClick={() => {
+                                                handleAddNote(noteType.duration);
+                                                setSelectedDuration(noteType.id);
+                                            }}
+                                            // Standard button styling: square, rounded-2xl, soft shadow, subtle gray border
+                                            className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_4px_12px_-6px_rgba(0,0,0,0.1)] transition-all overflow-hidden border-2 border-[#DDE2E5] hover:border-[#CED4DA]"
+                                        >
+                                            <NoteButtonIcon duration={noteType.duration} />
+                                        </button>
+                                        {/* Blue selection outline applied outside the button for the active note */}
+                                        {isSelected && (
+                                            <div className="absolute -inset-1 border-4 border-[#5C7CFA] rounded-3xl pointer-events-none"></div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         <div className="hidden md:block w-px h-10 bg-slate-200 mx-2"></div>
 
+                        {/* Undo/Clear buttons are preserved */}
                         <div className="flex gap-3 mt-2 md:mt-0">
-                            <button onClick={handleUndo} disabled={userAnswer.length === 0}
-                                    className="flex items-center gap-2 px-5 py-3.5 bg-[#FFF9EB] text-[#D4A017] border border-[#FBEECB] rounded-xl font-semibold hover:bg-[#FFF4D6] disabled:opacity-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round"
-                                          d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
+                            <button onClick={handleUndo} disabled={userAnswer.length === 0} className="flex items-center gap-2 px-5 py-3.5 bg-[#FFF9EB] text-[#D4A017] border border-[#FBEECB] rounded-xl font-semibold hover:bg-[#FFF4D6] disabled:opacity-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
                                 </svg>
                                 Herstel
                             </button>
-                            <button onClick={handleClear} disabled={userAnswer.length === 0}
-                                    className="flex items-center gap-2 px-5 py-3.5 bg-[#FEF2F2] text-[#DC2626] border border-[#FEE2E2] rounded-xl font-semibold hover:bg-[#FEE2E2] disabled:opacity-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round"
-                                          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                            <button onClick={handleClear} disabled={userAnswer.length === 0} className="flex items-center gap-2 px-5 py-3.5 bg-[#FEF2F2] text-[#DC2626] border border-[#FEE2E2] rounded-xl font-semibold hover:bg-[#FEE2E2] disabled:opacity-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
                                 </svg>
                                 Wis
                             </button>
                         </div>
                     </div>
-                    <div
-                        className="ml-0 md:ml-16 bg-[#F8FAFB] border border-[#E8F0F4] rounded-xl p-4 mt-2 mb-6 flex justify-center items-center min-h-[120px] shadow-sm">
+
+                    <div className="ml-0 md:ml-16 bg-[#F8FAFB] border border-[#E8F0F4] rounded-xl p-4 mt-2 mb-6 flex justify-center items-center min-h-[120px] shadow-sm">
                         <MiniNotation timeSignature={timeSignature} notes={answerString}/>
                     </div>
 
@@ -279,7 +387,7 @@ function PracticeArea() {
                                 <div className="border-t border-[#FED7D7] pt-4 mt-2">
                                     <p className="text-sm text-[#C53030] font-medium mb-3">Juiste antwoord:</p>
                                     <div className="bg-white/60 border border-[#FED7D7] rounded-xl p-3 flex justify-center items-center min-h-[100px]">
-                                        <MiniNotation timeSignature={timeSignature} notes={currentTask.easyScore} />
+                                        <MiniNotation timeSignature={timeSignature} notes={targetScore} />
                                     </div>
                                 </div>
                             </div>
@@ -301,10 +409,17 @@ function PracticeArea() {
     );
 }
 
+const PracticeLoading = () => (
+    <div className="flex items-center justify-center min-h-screen bg-[#FFF6EB] text-slate-500 font-medium">
+        Aan het
+        laden...
+    </div>
+);
+
 export default function PracticePage() {
     return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#FFF6EB] text-slate-500 font-medium">Aan het laden...</div>}>
-            <PracticeArea />
+        <Suspense fallback={(<PracticeLoading />) as ReactNode}>
+            <PracticeArea/>
         </Suspense>
     );
 }

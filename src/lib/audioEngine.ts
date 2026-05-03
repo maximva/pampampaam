@@ -14,8 +14,8 @@ export async function playRhythmPreview(easyScore: string, tempo: number) {
             envelope: {
                 attack: 0.005,  // Sharp percussive hit at the start
                 decay: 0.1,     // Initial volume drops slightly
-                sustain: 0.1,   // SUSTAIN: 0.3 (Holds the tone at 30% volume for the duration)
-                release: 0.2    // RELEASE: 0.4 (Takes 0.4s to smoothly fade out after the note ends)
+                sustain: 0.1,   // Holds the tone at 10% volume for the duration
+                release: 0.2    // Takes 0.2s to smoothly fade out after the note ends
             }
         }).toDestination();
 
@@ -36,30 +36,41 @@ export async function playRhythmPreview(easyScore: string, tempo: number) {
         w: beatDuration * 4,
         h: beatDuration * 2,
         q: beatDuration,
+        "8.": beatDuration * 0.75, // Added this to support your dotted eighth note!
         "8": beatDuration / 2,
         "16": beatDuration / 4,
     };
 
-    const notes = easyScore.split(",").map(n => n.trim());
+    const notes = easyScore.split(",").map(n => n.trim()).filter(n => n !== "");
     let currentOffset = 0;
 
     const partEvents = notes.map(noteStr => {
-        const [, durationRaw] = noteStr.split("/");
+        // VexFlow format is typically "Pitch/Duration/Type" (e.g., "B4/q/r")
+        const parts = noteStr.split("/");
+        const durationRaw = parts[1];
+
+        // If there's a third element and it's "r", mark it as a rest
+        const isRest = parts.length > 2 && parts[2] === "r";
+
         const durationSec = durationMap[durationRaw] || beatDuration;
 
-        // Add the calculated durationSec to the event object
-        const event = { time: currentOffset, note: "C5", duration: durationSec };
+        const event = {
+            time: currentOffset,
+            note: "C5",
+            duration: durationSec,
+            isRest: isRest
+        };
 
         currentOffset += durationSec;
         return event;
     });
 
     currentPart = new Tone.Part((time, value) => {
-        // --- THE FIX ---
-        // 1. Pass value.duration instead of "32n"
-        // 2. Multiply duration by 0.85 to create a slight "gap" between notes (articulation),
-        //    allowing the release tail to be heard clearly before the next note hits.
-        previewSynth!.triggerAttackRelease(value.note, value.duration * 0.85, time);
+        // Only trigger sound if the event is not a rest
+        if (!value.isRest) {
+            // Multiply duration by 0.85 to create a slight "gap" between notes
+            previewSynth!.triggerAttackRelease(value.note, value.duration * 0.85, time);
+        }
     }, partEvents);
 
     currentPart.start(0);
