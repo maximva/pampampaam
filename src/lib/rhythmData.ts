@@ -1,13 +1,13 @@
 export const RHYTHM_PRESETS = [
     {
         id: "syncope_2_4",
-        name: "Syncopation",
+        name: "Syncope",
         timeSignature: "2/4",
         easyScore: "B4/8, B4/q, B4/8"
     },
     {
         id: "hop-figuur",
-        name: "Hop Figuur",
+        name: "Hopfiguur",
         timeSignature: "2/4",
         easyScore: "B4/8., B4/16, B4/8, B4/8"
     },
