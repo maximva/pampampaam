@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 
-let previewSynth: Tone.Synth | null = null;
+let previewSynth: Tone.FMSynth | null = null;
 let currentPart: Tone.Part | null = null;
 
 export async function playRhythmPreview(easyScore: string, tempo: number) {
