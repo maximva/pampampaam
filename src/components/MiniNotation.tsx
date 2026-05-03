@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import {useEffect, useId, useRef} from "react";
 import { Factory, Beam } from "vexflow";
 
 interface MiniNotationProps {
@@ -10,13 +10,16 @@ interface MiniNotationProps {
 export default function MiniNotation({ timeSignature, notes }: MiniNotationProps) {
     const containerRef = useRef<HTMLDivElement>(null!);
 
+    const rawId = useId();
+    const uniqueId = `vexflow-${rawId.replace(/:/g, "")}`;
+
     useEffect(() => {
         if (!containerRef.current) return;
         containerRef.current.innerHTML = ""; // Clear on re-render
 
         const vf = new Factory({
             renderer: {
-                elementId: "vexflow-container",
+                elementId: uniqueId,
                 width: 220,
                 height: 120
             }
@@ -55,5 +58,5 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
         }
     }, [timeSignature, notes]);
 
-    return <div ref={containerRef} className="pointer-events-none w-[220px] h-[120px]" />;
+    return <div id={uniqueId} ref={containerRef} className="pointer-events-none w-[220px] h-[120px]" />;
 }
