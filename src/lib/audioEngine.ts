@@ -9,16 +9,24 @@ export async function playRhythmPreview(easyScore: string, tempo: number) {
     }
 
     if (!previewSynth) {
-        previewSynth = new Tone.Synth({
-            oscillator: { type: "triangle" },
+        previewSynth = new Tone.FMSynth({
+            harmonicity: 3, // Adds complexity to the tone
+            modulationIndex: 10,
+            oscillator: { type: "sine" }, // Smooth base
             envelope: {
-                attack: 0.005,  // Sharp percussive hit at the start
-                decay: 0.1,     // Initial volume drops slightly
-                sustain: 0.1,   // Holds the tone at 10% volume for the duration
-                release: 0.2    // Takes 0.2s to smoothly fade out after the note ends
+                attack: 0.005,  // Instant "hit" of the hammer
+                decay: 1.5,    // Long decay like a real string
+                sustain: 0.1,  // Volume drops almost to zero if held
+                release: 0.1    // Natural fade
+            },
+            modulation: { type: "sawtooth" },
+            modulationEnvelope: {
+                attack: 0.002,
+                decay: 0.2,
+                sustain: 0.1,
+                release: 0.2
             }
         }).toDestination();
-
         Tone.getContext().lookAhead = 0.05;
     }
 

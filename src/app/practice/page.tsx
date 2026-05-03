@@ -110,7 +110,7 @@ function PracticeArea() {
 
     const handleAddNote = (duration: string) => {
         setUserAnswer(prev => {
-            const newAnswer = [...prev, `B4/${duration}`];
+            const newAnswer = [...prev, duration.includes('r') ? `B4/${duration}` : `G4/${duration}`];
 
             if (suffix && !prev.includes('|')) {
                 const totalBeats = newAnswer.reduce((sum, n) => sum + getNoteBeats(n), 0);
@@ -260,10 +260,12 @@ function PracticeArea() {
                         <div className="flex gap-1.5 p-1.5 bg-[#F1F3F5] rounded-3xl border border-[#DDE2E5]">
                             {[
                                 { id: "q", duration: "q" },
+                                { id: "q.", duration: "q." },
                                 { id: "8", duration: "8" },
                                 { id: "8.", duration: "8." },
                                 { id: "16", duration: "16" },
                                 { id: "qr", duration: "q/r" },
+                                { id: "8r", duration: "8/r" },
                             ].map((noteType) => {
                                 const isSelected = noteType.id === selectedDuration;
                                 return (

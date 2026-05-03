@@ -32,7 +32,7 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
             renderer: {
                 elementId: uniqueId,
                 width: dynamicWidth,
-                height: 120
+                height: 120,
             }
         });
 
