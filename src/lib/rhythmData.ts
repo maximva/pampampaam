@@ -3,7 +3,7 @@ export const RHYTHM_PRESETS = [
         id: "gepunte-kwart-achtste",
         category: "Kwarten & Achtsten",
         timeSignature: "2/4",
-        easyScore: "G4/q., G4/8,"
+        easyScore: "G4/q., G4/8"
     },
     {
         id: "8-8-8-16-16",

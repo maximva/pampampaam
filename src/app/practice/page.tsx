@@ -103,6 +103,7 @@ function PracticeArea() {
     const answerString = userAnswer.join(", ");
 
     const getNoteBeats = (noteStr: string) => {
+        if (noteStr.includes('/q.')) return 1.5;
         if (noteStr.includes('/q')) return 1;
         if (noteStr.includes('/8.')) return 0.75;
         if (noteStr.includes('/8')) return 0.5;
@@ -113,14 +114,11 @@ function PracticeArea() {
     const handleAddNote = (duration: string) => {
         setUserAnswer(prev => {
             const newAnswer = [...prev, duration];
+            const prevTotalBeats = prev.reduce((sum, n) => sum + getNoteBeats(n), 0);
+            const beatsPerMeasure = parseInt(timeSignature.split('/')[0], 10);
 
-            if (suffix && !prev.includes('|')) {
-                const totalBeats = newAnswer.reduce((sum, n) => sum + getNoteBeats(n), 0);
-                const beatsPerMeasure = parseInt(timeSignature.split('/')[0], 10);
-
-                if (totalBeats >= beatsPerMeasure) {
-                    return [...newAnswer, '|'];
-                }
+            if (prevTotalBeats > 0 && prevTotalBeats % beatsPerMeasure === 0) {
+                return [...prev, '|', duration];
             }
 
             return newAnswer;
