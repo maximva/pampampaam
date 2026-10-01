@@ -73,15 +73,6 @@ export default function Home() {
               <h1 className="text-3xl font-bold mb-8 text-slate-800">Ritmetrainer</h1>
 
               <div className="flex flex-col gap-6 mb-8">
-                <label className="flex flex-col">
-                  <span className="font-semibold text-sm mb-2 text-slate-700">Tempo: {tempo} BPM</span>
-                  <input
-                      type="range" min="60" max="200" value={tempo}
-                      onChange={(e) => setTempo(Number(e.target.value))}
-                      className="w-full accent-blue-600 cursor-pointer"
-                  />
-                </label>
-
                 <div className="flex flex-col">
                   <span id="maatsoort-label" className="font-semibold text-sm mb-2 text-slate-700">Maatsoort</span>
                   <div
@@ -90,22 +81,31 @@ export default function Home() {
                       className="flex rounded-lg overflow-hidden border border-slate-300 bg-slate-50"
                   >
                     {TIME_SIGNATURES.map((ts) => (
-                      <button
-                          key={ts}
-                          type="button"
-                          aria-pressed={timeSignature === ts}
-                          onClick={() => handleTimeSignatureChange(ts)}
-                          className={`flex-1 px-3 py-2.5 font-medium border-r border-slate-300 last:border-r-0 transition-colors ${
-                              timeSignature === ts
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                          }`}
-                      >
-                        {ts}
-                      </button>
+                        <button
+                            key={ts}
+                            type="button"
+                            aria-pressed={timeSignature === ts}
+                            onClick={() => handleTimeSignatureChange(ts)}
+                            className={`flex-1 px-3 py-2.5 font-medium border-r border-slate-300 last:border-r-0 transition-colors ${
+                                timeSignature === ts
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                            }`}
+                        >
+                          {ts}
+                        </button>
                     ))}
                   </div>
                 </div>
+
+                <label className="flex flex-col">
+                  <span className="font-semibold text-sm mb-2 text-slate-700">Tempo: {tempo} BPM</span>
+                  <input
+                      type="range" min="60" max="200" value={tempo}
+                      onChange={(e) => setTempo(Number(e.target.value))}
+                      className="w-full accent-blue-600 cursor-pointer"
+                  />
+                </label>
 
                 <label className="flex flex-col pt-2 border-t border-slate-100">
                   <span className="font-semibold text-sm mb-2 text-slate-700">Aantal oefeningen</span>
@@ -207,7 +207,7 @@ export default function Home() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      playRhythmPreview(rhythm.easyScore, tempo);
+                                      playRhythmPreview(rhythm.easyScore, tempo, rhythm.tuplets);
                                     }}
                                     className={`p-1.5 rounded-full transition-colors flex items-center justify-center ${
                                         isSelected ? 'text-blue-700 bg-blue-100 hover:bg-blue-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-800'
@@ -220,7 +220,7 @@ export default function Home() {
                               </div>
 
                               <div className="flex justify-center items-center rounded-lg bg-white/60 -mx-2">
-                                <MiniNotation timeSignature={rhythm.timeSignature} notes={rhythm.easyScore} />
+                                <MiniNotation timeSignature={rhythm.timeSignature} notes={rhythm.easyScore} tuplets={rhythm.tuplets} />
                               </div>
                             </div>
                         );
