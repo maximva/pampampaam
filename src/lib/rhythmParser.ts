@@ -117,3 +117,11 @@ export const getSoundedBeats = (noteStr: string, index: number, tuplets: TupletS
     const tuplet = getTupletAt(index, tuplets);
     return tuplet ? beats * (tuplet.notesOccupied / tuplet.numNotes) : beats;
 };
+
+/**
+ * Total length of a whole score in quarter notes, ignoring bar separators. Used to
+ * decide whether something fits a single measure, so the units are the same ones
+ * getMeasureBeats returns.
+ */
+export const getScoreBeats = (score: string, tuplets: TupletSpec[] = []) =>
+    getNotes(score).reduce((total, note, index) => total + getSoundedBeats(note, index, tuplets), 0);
