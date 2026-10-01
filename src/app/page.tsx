@@ -9,10 +9,12 @@ const SUFFIX_PRESETS = [
   { id: "kwart-kwartrust", name: "Bald 1e jaar", notes: "G4/q, B4/q/r" },
 ];
 
+const TIME_SIGNATURES = Array.from(new Set(RHYTHM_PRESETS.map(r => r.timeSignature)));
+
 export default function Home() {
   const router = useRouter();
   const [tempo, setTempo] = useState(65);
-  const [timeSignature, setTimeSignature] = useState("2/4");
+  const [timeSignature, setTimeSignature] = useState(TIME_SIGNATURES[0] ?? "2/4");
   const [selectedRhythms, setSelectedRhythms] = useState<string[]>([]);
   const [numExercises, setNumExercises] = useState(5);
   const [suffix, setSuffix] = useState("");
@@ -46,27 +48,20 @@ export default function Home() {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedRhythms.length === availableRhythms.length) {
-      setSelectedRhythms([]);
-    } else {
-      setSelectedRhythms(availableRhythms.map(r => r.id));
-    }
-  };
-
   const startPractice = () => {
-    if (selectedRhythms.length === 0) return;
+    const rhythmsToUse = selectedRhythms.length > 0
+        ? selectedRhythms
+        : availableRhythms.map(r => r.id);
+    if (rhythmsToUse.length === 0) return;
     const sequence: string[] = [];
     for (let i = 0; i < numExercises; i++) {
-      const randomIndex = Math.floor(Math.random() * selectedRhythms.length);
-      sequence.push(selectedRhythms[randomIndex]);
+      const randomIndex = Math.floor(Math.random() * rhythmsToUse.length);
+      sequence.push(rhythmsToUse[randomIndex]);
     }
     const rhythmQuery = sequence.join(",");
     const suffixQuery = suffix.trim() ? `&suffix=${encodeURIComponent(suffix.trim())}` : "";
     router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}${suffixQuery}`);
   };
-
-  const isAllSelected = availableRhythms.length > 0 && selectedRhythms.length === availableRhythms.length;
 
   return (
       <main className="min-h-screen bg-slate-100 p-4 md:p-8">
@@ -87,18 +82,30 @@ export default function Home() {
                   />
                 </label>
 
-                <label className="flex flex-col">
-                  <span className="font-semibold text-sm mb-2 text-slate-700">Maatsoort</span>
-                  <select
-                      value={timeSignature}
-                      onChange={(e) => handleTimeSignatureChange(e.target.value)}
-                      className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+                <div className="flex flex-col">
+                  <span id="maatsoort-label" className="font-semibold text-sm mb-2 text-slate-700">Maatsoort</span>
+                  <div
+                      role="group"
+                      aria-labelledby="maatsoort-label"
+                      className="flex rounded-lg overflow-hidden border border-slate-300 bg-slate-50"
                   >
-                    <option value="2/4">2/4</option>
-                    <option value="3/4">3/4</option>
-                    <option value="4/4">4/4</option>
-                  </select>
-                </label>
+                    {TIME_SIGNATURES.map((ts) => (
+                      <button
+                          key={ts}
+                          type="button"
+                          aria-pressed={timeSignature === ts}
+                          onClick={() => handleTimeSignatureChange(ts)}
+                          className={`flex-1 px-3 py-2.5 font-medium border-r border-slate-300 last:border-r-0 transition-colors ${
+                              timeSignature === ts
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                          }`}
+                      >
+                        {ts}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <label className="flex flex-col pt-2 border-t border-slate-100">
                   <span className="font-semibold text-sm mb-2 text-slate-700">Aantal oefeningen</span>
@@ -141,14 +148,6 @@ export default function Home() {
                   />
                 </div>
               </div>
-
-              <button
-                  onClick={startPractice}
-                  disabled={selectedRhythms.length === 0}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98]"
-              >
-                {selectedRhythms.length === 0 ? "Selecteer ritmes" : `Start oefeningen`}
-              </button>
             </div>
           </aside>
 
@@ -162,10 +161,10 @@ export default function Home() {
 
               {availableRhythms.length > 0 && (
                   <button
-                      onClick={toggleSelectAll}
-                      className="text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-colors border border-blue-200"
+                      onClick={startPractice}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg transition-all shadow-sm active:scale-[0.98]"
                   >
-                    {isAllSelected ? "Deselecteer Alles" : "Selecteer Alles"}
+                    {selectedRhythms.length === 0 ? "Oefen alles" : "Oefen selectie"}
                   </button>
               )}
             </header>

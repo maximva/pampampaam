@@ -40,6 +40,11 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
         let xOffset = 10;
         const allBeams: Beam[] = [];
 
+        // Beat structure comes from the time signature: VexFlow's implicit
+        // default is groups of 2/8, which beams 6/8 as 3 groups of 2. Asking for
+        // the signature's own groups yields 3/8 for 6/8, i.e. 2 groups of 3.
+        const beamGroups = Beam.getDefaultBeamGroups(timeSignature);
+
         try {
             // Handle completely empty initial state
             if (measures.length === 0) {
@@ -69,8 +74,8 @@ export default function MiniNotation({ timeSignature, notes }: MiniNotationProps
                 if (isFirst) stave.addTimeSignature(timeSignature);
 
                 // Collect notes that need beams
-                const stemmables = vexNotes.filter(n => typeof (n as any).hasStem === 'function' && (n as any).hasStem());
-                allBeams.push(...Beam.generateBeams(stemmables));
+                const stemmables = vexNotes.filter(n => n.hasStem());
+                allBeams.push(...Beam.generateBeams(stemmables, { groups: beamGroups }));
 
                 xOffset += measureWidth;
             });

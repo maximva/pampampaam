@@ -64,5 +64,23 @@ export const RHYTHM_PRESETS = [
         category: "Achtsten & zestienden",
         timeSignature: "2/4",
         easyScore: "G4/16, G4/16, G4/16, G4/16, G4/8, G4/16, G4/16"
+    },
+    {
+        id: "two-dotted-4",
+        category: "Achtsten & zestienden",
+        timeSignature: "6/8",
+        easyScore: "G4/4., G4/4."
+    },
+    {
+        id: "two-4-and-8",
+        category: "Achtsten & zestienden",
+        timeSignature: "6/8",
+        easyScore: "G4/4, G4/8, G4/4, G4/8"
+    },
+    {
+        id: "two-3-8",
+        category: "Achtsten & zestienden",
+        timeSignature: "6/8",
+        easyScore: "G4/8, G4/8, G4/8, G4/8, G4/8, G4/8"
     }
 ];
