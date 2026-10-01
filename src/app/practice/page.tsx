@@ -4,16 +4,25 @@ import {Suspense, useState, useMemo, useEffect, useId, useRef, ReactNode} from "
 import { Factory, BarlineType } from "vexflow";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 import { playRhythmPreview } from "@/lib/audioEngine";
+import { EPSILON, getMeasureBeats, getNoteBeats, getNotes } from "@/lib/rhythmParser";
 import MiniNotation from "@/components/MiniNotation";
 
+// Longest to shortest within notes, then rests. Dots follow the rest marker
+// ("B4/8/r."), matching the EasyScore grammar.
 const NOTE_SELECT_OPTIONS = [
-    { id: "q", duration: "G4/q" },
+    { id: "w", duration: "G4/w" },
+    { id: "h.", duration: "G4/h." },
+    { id: "h", duration: "G4/h" },
     { id: "q.", duration: "G4/q." },
-    { id: "8", duration: "G4/8" },
+    { id: "q", duration: "G4/q" },
     { id: "8.", duration: "G4/8." },
+    { id: "8", duration: "G4/8" },
     { id: "16", duration: "G4/16" },
+    { id: "hr", duration: "B4/h/r" },
     { id: "qr", duration: "B4/q/r" },
+    { id: "8r.", duration: "B4/8/r." },
     { id: "8r", duration: "B4/8/r" },
+    { id: "16r", duration: "B4/16/r" },
 ];
 
 function NoteButtonIcon({ duration }: { duration: string }) {
@@ -96,32 +105,32 @@ function PracticeArea() {
         return suffix ? `${currentTask.easyScore}, ${suffix}` : currentTask.easyScore;
     }, [currentTask, suffix]);
 
+    // Only offer notes that fit inside one measure of the selected meter, so a
+    // whole note is not offered in 2/4 and a half note is not offered in 3/8.
+    const availableNoteOptions = useMemo(() => {
+        const measureBeats = getMeasureBeats(timeSignature);
+        return NOTE_SELECT_OPTIONS.filter(option => getNoteBeats(option.duration) <= measureBeats + EPSILON);
+    }, [timeSignature]);
+
     if (!currentTask) {
         return <div className="p-8 text-center">Geen ritmes geselecteerd.</div>;
     }
 
     const answerString = userAnswer.join(", ");
 
-    const getNoteBeats = (noteStr: string) => {
-        if (noteStr.includes('/q.')) return 1.5;
-        if (noteStr.includes('/q')) return 1;
-        if (noteStr.includes('/8.')) return 0.75;
-        if (noteStr.includes('/8')) return 0.5;
-        if (noteStr.includes('/16')) return 0.25;
-        return 0;
-    };
-
     const handleAddNote = (duration: string) => {
         setUserAnswer(prev => {
-            const newAnswer = [...prev, duration];
-            const prevTotalBeats = prev.reduce((sum, n) => sum + getNoteBeats(n), 0);
-            const beatsPerMeasure = parseInt(timeSignature.split('/')[0], 10);
+            const filledBeats = prev.reduce((sum, n) => sum + getNoteBeats(n), 0);
+            const measureBeats = getMeasureBeats(timeSignature);
+            const remainder = filledBeats % measureBeats;
+            const measureIsFull = filledBeats > 0
+                && (Math.abs(remainder) < EPSILON || Math.abs(remainder - measureBeats) < EPSILON);
 
-            if (prevTotalBeats > 0 && prevTotalBeats % beatsPerMeasure === 0) {
+            if (measureIsFull) {
                 return [...prev, '|', duration];
             }
 
-            return newAnswer;
+            return [...prev, duration];
         });
         setFeedback("idle");
     };
@@ -143,14 +152,11 @@ function PracticeArea() {
     };
 
     const checkAnswer = () => {
-        const target = targetScore.replace(/\s+/g, '');
-        const user = answerString.replace(/\s+/g, '');
+        const target = getNotes(targetScore);
+        const user = getNotes(answerString);
+        const isCorrect = target.length === user.length && target.every((note, i) => note === user[i]);
 
-        if (target === user) {
-            setFeedback("correct");
-        } else {
-            setFeedback("incorrect");
-        }
+        setFeedback(isCorrect ? "correct" : "incorrect");
     };
 
     const nextTask = () => {
@@ -225,7 +231,7 @@ function PracticeArea() {
 
                     <div className="flex justify-center mb-4 relative">
                         <button
-                            onClick={() => playRhythmPreview(playableScore, tempo)}
+                            onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets)}
                             className="group flex items-center gap-3 bg-gradient-to-b from-[#5C7CFA] to-[#4C6EF5] hover:from-[#4C6EF5] hover:to-[#3B5BDB] text-white px-10 py-4 rounded-full font-bold shadow-[0_8px_20px_-6px_rgba(76,110,245,0.5)] transition-all active:scale-95 text-lg"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
@@ -254,7 +260,7 @@ function PracticeArea() {
 
                     <div className="flex flex-wrap items-center gap-3 ml-0 md:ml-16">
                         <div className="flex flex-wrap gap-1.5 p-1.5 bg-[#F1F3F5] rounded-3xl border border-[#DDE2E5]">
-                            {NOTE_SELECT_OPTIONS.map((noteType) => {
+                            {availableNoteOptions.map((noteType) => {
                                 const isSelected = noteType.id === selectedDuration;
                                 return (
                                     <div key={noteType.id} className="relative">
@@ -353,7 +359,7 @@ function PracticeArea() {
                                 <div className="border-t border-[#FED7D7] pt-4 mt-2">
                                     <p className="text-sm text-[#C53030] font-medium mb-3">Juiste antwoord:</p>
                                     <div className="bg-white/60 border border-[#FED7D7] rounded-xl p-3 flex justify-center items-center min-h-[100px]">
-                                        <MiniNotation timeSignature={timeSignature} notes={targetScore} />
+                                        <MiniNotation timeSignature={timeSignature} notes={targetScore} tuplets={currentTask.tuplets} />
                                     </div>
                                 </div>
                             </div>
