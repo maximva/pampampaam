@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import MiniNotation from "@/components/MiniNotation";
-import { playRhythmPreview } from "@/lib/audioEngine";
+import { playRhythmPreview, SOUND_OPTIONS, type PreviewSound } from "@/lib/audioEngine";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
 import { EPSILON, getMeasureBeats, getScoreBeats } from "@/lib/rhythmParser";
 
@@ -21,6 +21,7 @@ const clampExercises = (value: number) =>
 export default function Home() {
   const router = useRouter();
   const [tempo, setTempo] = useState(65);
+  const [sound, setSound] = useState<PreviewSound>("default");
   const [timeSignature, setTimeSignature] = useState(TIME_SIGNATURES[0] ?? "2/4");
   const [selectedRhythms, setSelectedRhythms] = useState<string[]>([]);
   const [numExercises, setNumExercises] = useState(5);
@@ -138,7 +139,8 @@ export default function Home() {
     const rhythmQuery = sequence.join(",");
     const suffix = selectedSuffix?.notes ?? "";
     const suffixQuery = suffix ? `&suffix=${encodeURIComponent(suffix)}` : "";
-    router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}${suffixQuery}`);
+    const soundQuery = sound !== "default" ? `&sound=${sound}` : "";
+    router.push(`/practice?tempo=${tempo}&ts=${timeSignature}&rhythms=${rhythmQuery}${suffixQuery}${soundQuery}`);
   };
 
   return (
@@ -179,10 +181,25 @@ export default function Home() {
                 <label className="flex flex-col">
                   <span className="font-semibold text-sm mb-2 text-slate-700">Tempo: {tempo} BPM</span>
                   <input
-                      type="range" min="60" max="200" value={tempo}
+                      type="range" min="40" max="100" value={tempo}
                       onChange={(e) => setTempo(Number(e.target.value))}
                       className="w-full accent-blue-600 cursor-pointer"
                   />
+                </label>
+
+                <label className="flex flex-col">
+                  <span className="font-semibold text-sm mb-2 text-slate-700">Geluid</span>
+                  <select
+                      value={sound}
+                      onChange={(e) => setSound(e.target.value as PreviewSound)}
+                      className="w-full border border-slate-300 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {SOUND_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                    ))}
+                  </select>
                 </label>
               </div>
             </div>
@@ -244,7 +261,7 @@ export default function Home() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      playRhythmPreview(rhythm.easyScore, tempo, rhythm.tuplets);
+                                      playRhythmPreview(rhythm.easyScore, tempo, rhythm.tuplets, sound);
                                     }}
                                     className={`p-1.5 rounded-full transition-colors flex items-center justify-center ${
                                         isSelected ? 'text-blue-700 bg-blue-100 hover:bg-blue-200' : 'text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-800'
@@ -274,6 +291,10 @@ export default function Home() {
             </div>
           </section>
         </div>
+
+        <footer className="max-w-[1600px] mx-auto mt-8 text-center text-sm text-slate-400">
+          Created by Maxim Vanden Abeele
+        </footer>
 
         {isSettingsOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -348,31 +369,47 @@ export default function Home() {
 
                         <div className="flex flex-col">
                             <span className="font-semibold text-sm mb-2 text-slate-700">Vaste eindmaat</span>
-                            {relevantSuffixPresets.length === 0 ? (
-                                <p className="text-sm text-slate-500">
+                            <div className="grid grid-cols-2 gap-2">
+                                {/* Explicit "nothing" choice, selected by default. Without it
+                                    the unselected state is invisible: no highlighted box means
+                                    either "none" or "I have not looked yet". */}
+                                <button
+                                    key="geen"
+                                    type="button"
+                                    aria-pressed={suffixId === null}
+                                    onClick={() => setSuffixId(null)}
+                                    className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 border-dashed transition-all ${
+                                        suffixId === null
+                                            ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                                            : 'border-slate-300 bg-white hover:border-slate-400'
+                                    }`}
+                                >
+                                    <span aria-hidden="true" className="text-2xl leading-none text-slate-300 select-none">–</span>
+                                    <span className="text-[10px] uppercase font-bold text-slate-500 mt-1">Geen eindmaat</span>
+                                </button>
+                                {relevantSuffixPresets.map((preset) => (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        aria-pressed={suffixId === preset.id}
+                                        onClick={() => setSuffixId(suffixId === preset.id ? null : preset.id)}
+                                        className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
+                                            suffixId === preset.id
+                                                ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="pointer-events-none scale-75 -my-2">
+                                            <MiniNotation timeSignature={timeSignature} notes={preset.notes}/>
+                                        </div>
+                                        <span className="text-[10px] uppercase font-bold text-slate-500 mt-1">{preset.name}</span>
+                                    </button>
+                                ))}
+                                </div>
+                            {relevantSuffixPresets.length === 0 && (
+                                <p className="text-sm text-slate-500 mt-2">
                                     Geen enkele eindmaat past in {timeSignature}.
                                 </p>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {relevantSuffixPresets.map((preset) => (
-                                        <button
-                                            key={preset.id}
-                                            type="button"
-                                            aria-pressed={suffixId === preset.id}
-                                            onClick={() => setSuffixId(suffixId === preset.id ? null : preset.id)}
-                                            className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
-                                                suffixId === preset.id
-                                                    ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
-                                                    : 'border-slate-200 bg-white hover:border-slate-300'
-                                            }`}
-                                        >
-                                            <div className="pointer-events-none scale-75 -my-2">
-                                                <MiniNotation timeSignature={timeSignature} notes={preset.notes}/>
-                                            </div>
-                                            <span className="text-[10px] uppercase font-bold text-slate-500 mt-1">{preset.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
                             )}
                         </div>
                     </div>

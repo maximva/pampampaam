@@ -3,7 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {Suspense, useState, useMemo, useEffect, useId, useRef, ReactNode} from "react";
 import { Factory, BarlineType, Beam, Fraction } from "vexflow";
 import { RHYTHM_PRESETS } from "@/lib/rhythmData";
-import { playRhythmPreview } from "@/lib/audioEngine";
+import { playRhythmPreview, type PreviewSound } from "@/lib/audioEngine";
 import { EPSILON, getMeasureBeats, getNotes, getScoreBeats, type TupletSpec } from "@/lib/rhythmParser";
 import MiniNotation from "@/components/MiniNotation";
 
@@ -177,6 +177,9 @@ function PracticeArea() {
     const rhythmsParam = searchParams.get("rhythms");
     const rhythmIds = rhythmsParam ? rhythmsParam.split(",") : [];
     const suffix = searchParams.get("suffix") || ""; // Get suffix
+    const soundParam = searchParams.get("sound");
+    const sound: PreviewSound =
+        soundParam === "piano" || soundParam === "woodblock" ? soundParam : "default";
 
     const activeTasks = useMemo(() => {
         return rhythmIds
@@ -374,7 +377,7 @@ function PracticeArea() {
                     {feedback === "idle" && userAnswer.length === 0 && (
                         <button
                             type="button"
-                            onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets)}
+                            onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets, sound)}
                             className="flex items-center gap-2.5 bg-gradient-to-r from-[#5C7CFA] to-[#4C6EF5] hover:from-[#4C6EF5] hover:to-[#3B5BDB] text-white px-8 py-3 sm:px-10 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-lg shadow-blue-500/30 transition-all active:scale-95 cursor-pointer"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
@@ -387,7 +390,7 @@ function PracticeArea() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets)}
+                                onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets, sound)}
                                 title="Luister nog eens"
                                 aria-label="Luister nog eens"
                                 className="flex items-center gap-1.5 bg-white text-[#4C6EF5] border-2 border-[#DDE7FF] hover:border-[#4C6EF5] hover:bg-[#F5F8FF] px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
@@ -433,7 +436,7 @@ function PracticeArea() {
                             <span className="text-rose-600 font-bold text-xs sm:text-sm">Niet helemaal goed</span>
                             <button
                                 type="button"
-                                onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets)}
+                                onClick={() => playRhythmPreview(playableScore, tempo, currentTask.tuplets, sound)}
                                 title="Luister nog eens"
                                 aria-label="Luister nog eens"
                                 className="flex items-center gap-1.5 bg-white text-[#4C6EF5] border-2 border-[#DDE7FF] hover:border-[#4C6EF5] hover:bg-[#F5F8FF] px-4 py-1.5 sm:px-5 sm:py-2 rounded-full font-bold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
@@ -539,6 +542,7 @@ function PracticeArea() {
                             <div className="flex flex-wrap gap-1 sm:gap-1.5 p-1 bg-[#F1F3F5] rounded-xl sm:rounded-2xl border border-[#DDE2E5] items-center">
                                 {options.map((option) => (
                                     <PaletteButton
+                                        key={option.id}
                                         option={option}
                                         isSelected={option.id === selectedDuration}
                                         onSelect={() => {
