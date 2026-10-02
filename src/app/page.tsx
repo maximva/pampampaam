@@ -36,6 +36,15 @@ export default function Home() {
   // in a dialog reached from the start button instead of the sidebar.
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Contact modal state. The message goes to /api/contact, which reads the
+  // destination address from a server-only env var, so it never leaks out.
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const contactDialogRef = useRef<HTMLDivElement>(null);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactState, setContactState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [contactError, setContactError] = useState("");
 
   // Escape closes, and the page behind the dialog must not scroll while it is up.
   useEffect(() => {
@@ -52,6 +61,22 @@ export default function Home() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isSettingsOpen]);
+
+  // Same treatment for the contact dialog: Escape closes, background locked.
+  useEffect(() => {
+    if (!isContactOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsContactOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    contactDialogRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isContactOpen]);
 
   const availableRhythms = useMemo(() => {
     return RHYTHM_PRESETS.filter(r => r.timeSignature === timeSignature);
@@ -116,6 +141,42 @@ export default function Home() {
   const openSettings = () => {
     setExerciseDraft(String(numExercises));
     setIsSettingsOpen(true);
+  };
+
+  const openContact = () => {
+    // A sent or failed state belongs to the previous visit; start fresh, but a
+    // half-written message survives closing so nothing gets lost by accident.
+    if (contactState === "sent" || contactState === "error") {
+      setContactName("");
+      setContactEmail("");
+      setContactMessage("");
+      setContactState("idle");
+      setContactError("");
+    }
+    setIsContactOpen(true);
+  };
+
+  const sendContactMessage = async () => {
+    if (contactState === "sending" || contactMessage.trim().length === 0) return;
+    setContactState("sending");
+    setContactError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactName.trim(),
+          replyTo: contactEmail.trim(),
+          message: contactMessage.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Verzenden is mislukt.");
+      setContactState("sent");
+    } catch (error) {
+      setContactState("error");
+      setContactError(error instanceof Error ? error.message : "Verzenden is mislukt.");
+    }
   };
 
   const toggleRhythm = (id: string) => {
@@ -293,8 +354,131 @@ export default function Home() {
         </div>
 
         <footer className="max-w-[1600px] mx-auto mt-8 text-center text-sm text-slate-400">
-          Created by Maxim Vanden Abeele
+          <button
+            type="button"
+            onClick={openContact}
+            title="Laat een bericht achter"
+            className="hover:text-slate-600 hover:underline underline-offset-4 transition-colors cursor-pointer"
+          >
+            Created by Maxim Vanden Abeele
+          </button>
         </footer>
+
+        {isContactOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div
+                    className="absolute inset-0 bg-slate-900/50"
+                    onClick={() => setIsContactOpen(false)}
+                    aria-hidden="true"
+                />
+
+                <div
+                    ref={contactDialogRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="contact-title"
+                    tabIndex={-1}
+                    className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto focus:outline-none"
+                >
+                    <h2 id="contact-title" className="text-xl font-bold text-slate-800">
+                        Laat een bericht achter
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1 mb-6">
+                        Vragen, ideeën of een foutje gevonden? Ik lees alles.
+                    </p>
+
+                    {contactState === "sent" ? (
+                        <div className="flex flex-col items-center text-center py-4">
+                            <div className="bg-emerald-100 text-emerald-700 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <p className="font-bold text-slate-800">Bericht verzonden!</p>
+                            <p className="text-sm text-slate-500 mt-1 mb-6">Bedankt voor je bericht.</p>
+                            <button
+                                type="button"
+                                onClick={() => setIsContactOpen(false)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg transition-all shadow-sm active:scale-[0.98]"
+                            >
+                                Sluiten
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex flex-col gap-4">
+                                <label className="flex flex-col">
+                                    <span className="font-semibold text-sm mb-1.5 text-slate-700">
+                                        Naam <span className="font-normal text-slate-400">(optioneel)</span>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={contactName}
+                                        maxLength={100}
+                                        onChange={(e) => setContactName(e.target.value)}
+                                        placeholder="Je naam"
+                                        className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-medium text-sm"
+                                    />
+                                </label>
+
+                                <label className="flex flex-col">
+                                    <span className="font-semibold text-sm mb-1.5 text-slate-700">
+                                        E-mail <span className="font-normal text-slate-400">(optioneel, als je antwoord wilt)</span>
+                                    </span>
+                                    <input
+                                        type="email"
+                                        value={contactEmail}
+                                        maxLength={200}
+                                        onChange={(e) => setContactEmail(e.target.value)}
+                                        placeholder="je@voorbeeld.be"
+                                        className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-medium text-sm"
+                                    />
+                                </label>
+
+                                <label className="flex flex-col">
+                                    <span className="font-semibold text-sm mb-1.5 text-slate-700">Bericht</span>
+                                    <textarea
+                                        value={contactMessage}
+                                        maxLength={2000}
+                                        rows={5}
+                                        onChange={(e) => setContactMessage(e.target.value)}
+                                        placeholder="Typ hier je bericht…"
+                                        className="border border-slate-300 p-2.5 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-medium text-sm resize-y"
+                                    />
+                                    <span className="text-xs text-slate-400 mt-1 self-end">
+                                        {contactMessage.length}/2000
+                                    </span>
+                                </label>
+
+                                {contactState === "error" && (
+                                    <p role="alert" className="text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                        {contactError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsContactOpen(false)}
+                                    className="px-5 py-2.5 rounded-lg font-semibold text-slate-600 border border-slate-300 hover:bg-slate-50 transition-colors"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={sendContactMessage}
+                                    disabled={contactState === "sending" || contactMessage.trim().length === 0}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {contactState === "sending" ? "Versturen…" : "Versturen"}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        )}
 
         {isSettingsOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
